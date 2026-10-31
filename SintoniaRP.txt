@@ -1,13 +1,13 @@
 -- JC HUB - SINTONIA RP (Versão Completa & Corrigida)
+-- ID: 125299131646017
 -- Autor: Jucarmelo
--- Design: Blue Modern
--- Bypass: Silen Anti-Cheat (Usando Heartbeat + Velocity Direct)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
@@ -19,12 +19,13 @@ local Humanoid = Character:WaitForChild("Humanoid")
 -- ==========================================
 
 local Config = {
-    FlySpeed = 60,
+    FlySpeed = 80, -- Velocidade máxima de voo
     WalkSpeed = 16,
-    MaxWalkSpeed = 32, -- Limitado para passar no filtro do Silen
+    MaxWalkSpeed = 32, 
     Noclip = false,
     Fly = false,
     GodMode = false,
+    AutoRevive = true,
     Color = Color3.fromRGB(0, 120, 255) -- Azul JC Hub
 }
 
@@ -32,6 +33,7 @@ local Config = {
 local FlyConn = nil
 local NoclipConn = nil
 local SpeedConn = nil
+local ReviveConn = nil
 
 -- ==========================================
 -- LÓGICA DE ANTI-CHEAT / MOVIMENTO
@@ -98,6 +100,28 @@ end)
 RunService.Heartbeat:Connect(function()
     if Config.GodMode and Humanoid.Health < Humanoid.MaxHealth then
         Humanoid.Health = Humanoid.MaxHealth
+    end
+end)
+
+-- 4. AUTO REVIVE (Lógica Específica Sintonia RP)
+ReviveConn = RunService.Heartbeat:Connect(function()
+    if not Config.AutoRevive then return end
+    
+    if not Character or not Character:FindFirstChild("Humanoid") then return end
+    
+    if Character.Humanoid.Health <= 0 then
+        task.spawn(function()
+            task.wait(1)
+            local ReplicatedStorage = game:GetService("ReplicatedStorage")
+            local OrpheusShared = ReplicatedStorage:FindFirstChild("OrpheusShared")
+            
+            if OrpheusShared then
+                local DeathEvent = OrpheusShared:FindFirstChild("Death")
+                if DeathEvent and DeathEvent:IsA("RemoteEvent") then
+                    DeathEvent:FireServer("Action1")
+                end
+            end
+        end)
     end
 end)
 
@@ -262,6 +286,11 @@ CreateButton("God Mode", "Invencibilidade Simples", function()
         Humanoid.Health = 100
         print("[JC Hub] God Mode OFF")
     end
+end)
+
+CreateButton("Auto Revive", "Reaviver Automático", function()
+    Config.AutoRevive = not Config.AutoRevive
+    print("[JC Hub] Auto Revive: " .. tostring(Config.AutoRevive))
 end)
 
 CreateButton("Resetar", "Voltar ao Normal", function()
