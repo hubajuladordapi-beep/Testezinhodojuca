@@ -2,75 +2,53 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 
 local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
-local Humanoid = Character:WaitForChild("Humanoid")
+local Config = { FlySpeed = 80, WalkSpeed = 16, Noclip = false, Fly = false, GodMode = false, AutoRevive = true }
 
-local Config = {
-    FlySpeed = 80,
-    WalkSpeed = 16,
-    MaxWalkSpeed = 32,
-    Noclip = false,
-    Fly = false,
-    GodMode = false,
-    AutoRevive = true
-}
+local function load()
+    local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local RootPart = Character:WaitForChild("HumanoidRootPart")
+    local Humanoid = Character:WaitForChild("Humanoid")
 
-local FlyConn = nil
-local NoclipConn = nil
-local SpeedConn = nil
-local ReviveConn = nil
-
-NoclipConn = RunService.Stepped:Connect(function()
-    if not Character then return end
-    if Config.Noclip then
-        for _, part in pairs(Character:GetChildren()) do
-            if part:IsA("BasePart") and part.CanCollide == true then
-                part.CanCollide = false
+    -- NOCLIP E VOO
+    RunService.RenderStepped:Connect(function()
+        if not Character then return end
+        if Config.Noclip then
+            for _, part in pairs(Character:GetChildren()) do
+                if part:IsA("BasePart") and part.CanCollide == true then part.CanCollide = false end
+            end
+        else
+            for _, part in pairs(Character:GetChildren()) do
+                if part:IsA("BasePart") and part.ClassName ~= "Motor6D" then part.CanCollide = true end
             end
         end
-    else
-        for _, part in pairs(Character:GetChildren()) do
-            if part:IsA("BasePart") and part.ClassName ~= "Motor6D" then
-                part.CanCollide = true
-            end
+        
+        if Config.Fly then
+            local MoveDir = Humanoid.MoveDirection
+            local CamCFrame = workspace.CurrentCamera.CFrame
+            local Fwd = CamCFrame.RightVector:Dot(MoveDir)
+            local Rgt = CamCFrame.LookVector:Dot(MMoveDir)
+            local Up = 0
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then Up = 1 end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then Up = -1 end
+            RootPart.Velocity = Vector3.new(Fwd * Config.FlySpeed, Up * Config.FlySpeed, Rgt * Config.FlySpeed)
+            Humanoid.WalkSpeed = 16
+        else
+            Humanoid.WalkSpeed = Config.WalkSpeed
         end
-    end
-end)
+    end)
 
-FlyConn = RunService.RenderStepped:Connect(function(dt)
-    if not Character or Character:FindFirstChild("HumanoidRootPart") == nil then return end
-    local RootPart = Character:FindFirstChild("HumanoidRootPart")
-    if Config.Fly then
-        local MoveDir = Humanoid.MoveDirection
-        local CameraCFrame = workspace.CurrentCamera.CFrame
-        local Forward = CameraCFrame.RightVector:Dot(MoveDir)
-        local Right = CameraCFrame.LookVector:Dot(MoveDir)
-        local UpForce = 0
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then UpForce = 1 end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then UpForce = -1 end
-        local Velocity = Vector3.new(Forward * Config.FlySpeed, UpForce * Config.FlySpeed, Right * Config.FlySpeed)
-        RootPart.Velocity = Velocity
-        RootPart.AssemblyLinearVelocity = Vector3.new(Velocity.X, RootPart.Velocity.Y, Velocity.Z)
-        Humanoid.WalkSpeed = 16
-    else
-        Humanoid.WalkSpeed = Config.WalkSpeed
-    end
-end)
+    -- GOD MODE
+    RunService.Heartbeat:Connect(function()
+        if Config.GodMode and Humanoid.Health < Humanoid.MaxHealth then
+            Humanoid.Health = Humanoid.MaxHealth
+        end
+    end)
 
-RunService.Heartbeat:Connect(function()
-    if Config.GodMode and Humanoid.Health < Humanoid.MaxHealth then
-        Humanoid.Health = Humanoid.MaxHealth
-    end
-end)
-
-ReviveConn = RunService.Heartbeat:Connect(function()
-    if not Config.AutoRevive then return end
-    if not Character or not Character:FindFirstChild("Humanoid") then return end
-    if Character.Humanoid.Health <= 0 then
+    -- AUTO REVIVE SINTONIA RP
+    RunService.Heartbeat:Connect(function()
+        if not Config.AutoRevive or Character.Humanoid.Health > 0 then return end
         task.spawn(function()
             task.wait(1)
             local OrpheusShared = ReplicatedStorage:FindFirstChild("OrpheusShared")
@@ -81,161 +59,54 @@ ReviveConn = RunService.Heartbeat:Connect(function()
                 end
             end
         end)
-    end
-end)
-
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "JCHubUI"
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Foreground
-ScreenGui.DisplayOrder = 100
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 380, 0, 450)
-MainFrame.Position = UDim2.new(0.5, -190, 0.5, -225)
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 20, 30)
-MainFrame.BackgroundTransparency = 0.1
-MainFrame.BorderSizePixel = 0
-MainFrame.Parent = ScreenGui
-
-local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0, 12)
-Corner.Parent = MainFrame
-
-local TitleBar = Instance.new("Frame")
-TitleBar.Name = "TitleBar"
-TitleBar.Size = UDim2.new(1, 0, 0, 40)
-TitleBar.BackgroundColor3 = Color3.fromRGB(0, 80, 200)
-TitleBar.BorderSizePixel = 0
-TitleBar.Parent = MainFrame
-
-local TitleText = Instance.new("TextLabel")
-TitleText.Name = "TitleText"
-TitleText.Size = UDim2.new(1, -40, 1, 0)
-TitleText.Position = UDim2.new(0, 10, 0, 0)
-TitleText.BackgroundTransparency = 1
-TitleText.Text = "JC HUB — SINTONIA RP"
-TitleText.Font = Enum.Font.GothamBold
-TitleText.TextSize = 16
-TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleText.Parent = TitleBar
-
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Name = "CloseBtn"
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -35, 0.5, -15)
-CloseBtn.BackgroundTransparency = 1
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
-end)
-CloseBtn.Parent = TitleBar
-
-local dragging = false
-local dragInput, mousePos, framePos
-
-TitleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        mousePos = input.Position
-        framePos = MainFrame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
-end)
-
-TitleBar.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        dragInput = input
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        local delta = input.Position - mousePos
-        MainFrame.Position = UDim2.new(framePos.X.Scale, framePos.X.Offset + delta.X, framePos.Y.Scale, framePos.Y.Offset + delta.Y)
-    end
-end)
-
-local Container = Instance.new("ScrollingFrame")
-Container.Name = "Container"
-Container.Size = UDim2.new(1, -20, 1, -60)
-Container.Position = UDim2.new(0, 10, 0, 50)
-Container.BackgroundTransparency = 1
-Container.ScrollBarThickness = 4
-Container.Parent = MainFrame
-
-local ListLayout = Instance.new("UIListLayout")
-ListLayout.Padding = UDim.new(0, 8)
-ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ListLayout.Parent = Container
-
-local function CreateButton(name, text, callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 40)
-    btn.BackgroundColor3 = Color3.fromRGB(25, 35, 50)
-    btn.BorderSizePixel = 0
-    btn.Text = text
-    btn.TextColor3 = Color3.fromRGB(200, 230, 255)
-    btn.Font = Enum.Font.GothamSemibold
-    btn.TextSize = 14
-    btn.Parent = Container
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 8)
-    btnCorner.Parent = btn
-    local btnStroke = Instance.new("UIStroke")
-    btnStroke.Color = Color3.fromRGB(0, 120, 255)
-    btnStroke.Transparency = 0.5
-    btnStroke.Parent = btn
-    btn.MouseButton1Click:Connect(function()
-        callback()
-        btn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-        task.wait(0.1)
-        btn.BackgroundColor3 = Color3.fromRGB(25, 35, 50)
     end)
-    return btn
+
+    -- INTERFACE
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "JCHubUI"
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Foreground
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Size = UDim2.new(0, 350, 0, 350)
+    MainFrame.Position = UDim2.new(0.5, -175, 0.5, -175)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(20, 25, 35)
+    MainFrame.BackgroundTransparency = 0.1
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Parent = ScreenGui
+    local Corner = Instance.new("UICorner"); Corner.CornerRadius = UDim.new(0, 10); Corner.Parent = MainFrame
+    
+    local TitleBar = Instance.new("Frame")
+    TitleBar.Size = UDim2.new(1, 0, 0, 40)
+    TitleBar.BackgroundColor3 = Color3.fromRGB(0, 100, 255)
+    TitleBar.BorderSizePixel = 0; TitleBar.Parent = MainFrame
+    local TitleText = Instance.new("TextLabel"); TitleText.Size = UDim2.new(1, -20, 1, 0); TitleText.Text = "JC HUB"; TitleText.Font = Enum.Font.GothamBold; TitleText.TextColor3 = Color3.fromRGB(255, 255, 255); TitleText.Parent = TitleBar
+    
+    local CloseBtn = Instance.new("TextButton"); CloseBtn.Size = UDim2.new(0, 30, 0, 30); CloseBtn.Text = "X"; CloseBtn.Parent = TitleBar
+    CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+    local Container = Instance.new("ScrollingFrame")
+    Container.Size = UDim2.new(1, -20, 1, -60)
+    Container.BackgroundTransparency = 1; Container.ScrollBarThickness = 4; Container.Parent = MainFrame
+    local ListLayout = Instance.new("UIListLayout"); ListLayout.Padding = UDim.new(0, 5); ListLayout.Parent = Container
+
+    local function btn(text, func)
+        local b = Instance.new("TextButton")
+        b.Size = UDim2.new(1, 0, 0, 35)
+        b.BackgroundColor3 = Color3.fromRGB(30, 40, 60)
+        b.Text = text; b.TextColor3 = Color3.fromRGB(200, 230, 255); b.Font = Enum.Font.GothamSemibold
+        b.Parent = Container
+        local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 5); c.Parent = b
+        b.MouseButton1Click:Connect(func)
+    end
+
+    btn("Super Speed", function() Config.WalkSpeed = 45 end)
+    btn("Toggle Voo", function() Config.Fly = not Config.Fly end)
+    btn("Noclip", function() Config.Noclip = not Config.Noclip end)
+    btn("God Mode", function() Config.GodMode = not Config.GodMode end)
+    btn("Auto Revive", function() Config.AutoRevive = not Config.AutoRevive end)
+    btn("Resetar", function() Config.Fly = false; Config.Noclip = false; Config.WalkSpeed = 16 end)
+
+    ScreenGui.Parent = LocalPlayer.PlayerGui
 end
 
-CreateButton("Velocidade Turbo", "Ativar Super Speed (Bypass)", function()
-    Config.WalkSpeed = 45
-    Config.MaxWalkSpeed = 45
-end)
-
-CreateButton("Voo Suave", "Toggle Voo", function()
-    Config.Fly = not Config.Fly
-end)
-
-CreateButton("Noclip Total", "Ativar/Desativar Noclip", function()
-    Config.Noclip = not Config.Noclip
-end)
-
-CreateButton("God Mode", "Invencibilidade Simples", function()
-    Config.GodMode = not Config.GodMode
-    if Config.GodMode then
-        Humanoid.Health = 1000
-    else
-        Humanoid.Health = 100
-    end
-end)
-
-CreateButton("Auto Revive", "Reaviver Automático", function()
-    Config.AutoRevive = not Config.AutoRevive
-end)
-
-CreateButton("Resetar", "Voltar ao Normal", function()
-    Config.Fly = false
-    Config.Noclip = false
-    Config.WalkSpeed = 16
-    HumanoidRootPart.Velocity = Vector3.new(0,0,0)
-end)
-
-ListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    Container.CanvasSize = UDim2.new(0, 0, 0, ListLayout.AbsoluteContentSize.Y)
-end)
-
-ScreenGui.Parent = Players.LocalPlayer.PlayerGui
+load()
+LocalPlayer.CharacterAdded:Connect(load)
